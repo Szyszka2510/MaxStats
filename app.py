@@ -6,7 +6,7 @@ import streamlit as st
 # Konfiguracja strony
 st.set_page_config(page_title="MaxStats - Twój Asystent Piłkarski", layout="wide")
 
-# Custom CSS — dostosowanie stylów na wzór Twojego QSS z PyQt6
+# Custom CSS — dostosowanie stylów
 st.markdown("""
 <style>
     .stApp { background-color: #0F172A; color: #F8FAFC; }
@@ -138,7 +138,7 @@ if df_matches is not None and not df_matches.empty:
             pts = team_row.iloc[0]['pts']
             m = team_row.iloc[0]['matches']
             total_teams = len(table_df)
-            pos_text = f"**{pos}. miejsce** na {total_teams} zespołów | **{pts} pkt** w {m} meczach"
+            pos_text = f"<b>{pos}. miejsce</b> na {total_teams} zespołów | <b>{pts} pkt</b> w {m} meczach"
         else:
             pos_text = "Brak danych w tabeli ligowej."
     else:
@@ -148,7 +148,7 @@ if df_matches is not None and not df_matches.empty:
     st.markdown(f"""
     <div class="pos-box">
         <span style="color: #38BDF8; font-size: 12px; font-weight: bold;">🏆 AKTUALNA POZYCJA W TABELI LIGOWEJ</span><br>
-        <span style="font-size: 18px; font-weight: bold; color: #FFFFFF;">{pos_text}</span>
+        <span style="font-size: 18px; color: #FFFFFF;">{pos_text}</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -275,7 +275,18 @@ if df_matches is not None and not df_matches.empty:
                     "Rożne / mecz": round(cr_sum / n_matches, 2)
                 })
 
-            comp_df = pd.DataFrame(comparison_rows).sort_values(by="Poz.")
+            comp_df = pd.DataFrame(comparison_rows)
+
+            # Opcje sortowania nad tabelą
+            col_sort_1, col_sort_2 = st.columns([2, 1])
+            with col_sort_1:
+                sort_col = st.selectbox("Sortuj według kolumny:", list(comp_df.columns), index=0)
+            with col_sort_2:
+                sort_order = st.radio("Kierunek:", ["Rosnąco", "Malejąco"], horizontal=True)
+
+            is_ascending = (sort_order == "Rosnąco")
+            comp_df = comp_df.sort_values(by=sort_col, ascending=is_ascending)
+
             st.dataframe(comp_df, use_container_width=True, hide_index=True)
 
     # ================= ZAKŁADKA 3: LISTA MECZÓW =================
@@ -324,7 +335,6 @@ if df_matches is not None and not df_matches.empty:
 
             matches_df = pd.DataFrame(matches_rows)
 
-            # Funkcja kolorująca wyniki tak jak w PyQt6
             def color_results(val):
                 if val == 'Zwycięstwo':
                     return 'background-color: #059669; color: white'
