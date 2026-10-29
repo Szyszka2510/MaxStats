@@ -6,7 +6,7 @@ import streamlit as st
 # Konfiguracja strony
 st.set_page_config(page_title="MaxStats - Twój Asystent Piłkarski", layout="wide")
 
-# Custom CSS — ukrycie paska narzędzi tabeli (3 kropki, pobieranie, szukanie) oraz stylizacja
+# Custom CSS — stylizacja aplikacji i tabel HTML
 st.markdown("""
 <style>
     .stApp { background-color: #0F172A; color: #F8FAFC; }
@@ -26,9 +26,27 @@ st.markdown("""
         padding: 15px;
         margin-bottom: 20px;
     }
-    /* Ukrycie paska narzędzi nad tabelami (3 kropki, pobieranie, wyszukiwanie, powiększenie) */
-    [data-testid="stElementToolbar"] {
-        display: none !important;
+    /* Stylizacja czystej tabeli HTML */
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #1E293B;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-top: 10px;
+    }
+    .custom-table th, .custom-table td {
+        padding: 10px 12px;
+        text-align: center;
+        border-bottom: 1px solid #334155;
+    }
+    .custom-table th {
+        background-color: #0F172A;
+        color: #38BDF8;
+        font-weight: bold;
+    }
+    .custom-table tr:hover {
+        background-color: #334155;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -226,7 +244,7 @@ if df_matches is not None and not df_matches.empty:
 
             st.metric("📊 BILANS & PUNKTACJA", f"{wins}Z - {draws}R - {losses}P", f"Zdobyte punkty w okresie: {pts_period} pkt", delta_color="off")
 
-    # ================= ZAKŁADKA 2: PORÓWNANIE ALL TEAMS =================
+    # ================= ZAKŁADKA 2: PORÓWNANIE ALL TEAMS (Czysty HTML) =================
     with tab2:
         if table_df is not None:
             pos_map = dict(zip(table_df['team'], table_df['pos']))
@@ -273,7 +291,7 @@ if df_matches is not None and not df_matches.empty:
                     "Gole Strac. / mecz": round(ga_sum / n_matches, 2),
                     "BTTS %": round((btts_cnt / n_matches) * 100, 1),
                     "Strzały / mecz": round(sh_sum / n_matches, 2),
-                    "Celne / mecz": round(st_sum / n_matches, 2),
+                    "Celne / mecz": round(st_val / n_matches, 2),
                     "Kartki / mecz": round(cards_sum / n_matches, 2),
                     "Faule / mecz": round(fl_sum / n_matches, 2),
                     "Rożne / mecz": round(cr_sum / n_matches, 2)
@@ -281,8 +299,42 @@ if df_matches is not None and not df_matches.empty:
 
             comp_df = pd.DataFrame(comparison_rows).sort_values(by="Poz.")
 
-            # Wyświetlenie czystej tabeli (kliknięcie w dowolną nagłówek kolumny sortuje rosnąco/malejąco)
-            st.dataframe(comp_df, use_container_width=True, hide_index=True)
+            # Zarządzanie stanem sortowania po kliknięciu
+            if 'sort_by' not in st.session_state:
+                st.session_state.sort_by = "Poz."
+            if 'sort_asc' not in st.session_state:
+                st.session_state.sort_asc = True
+
+            cols = list(comp_df.columns)
+            
+            # Generowanie czystej tabeli w HTML ze statycznymi nagłówkami bez denerwujących okienek
+            comp_df = comp_df.sort_values(by=st.session_state.sort_by, ascending=st.session_state.sort_asc)
+
+            # Szybki przełącznik sortowania w jednym wierszu
+            selected_col = st.selectbox("Wybrany parametr sortowania:", cols, index=cols.index(st.session_state.sort_by))
+            if selected_col != st.session_state.sort_by:
+                st.session_state.sort_by = selected_col
+                st.rerun()
+
+            btn_label = "⬇️ Od Największej do Najmniejszej" if st.session_state.sort_asc else "⬆️ Od Najmniejszej do Największej"
+            if st.button(btn_label):
+                st.session_state.sort_asc = not st.session_state.sort_asc
+                st.rerun()
+
+            html = "<table class='custom-table'><thead><tr>"
+            for c in cols:
+                icon = " 🔽" if c == st.session_state.sort_by and not st.session_state.sort_asc else (" 🔼" if c == st.session_state.sort_by else "")
+                html += f"<th>{c}{icon}</th>"
+            html += "</tr></thead><tbody>"
+
+            for _, r in comp_df.iterrows():
+                html += "<tr>"
+                for c in cols:
+                    html += f"<td>{r[c]}</td>"
+                html += "</tr>"
+            html += "tbody></table>"
+
+            st.markdown(html, unsafe_allow_html=True)
 
     # ================= ZAKŁADKA 3: LISTA MECZÓW =================
     with tab3:
@@ -311,45 +363,42 @@ if df_matches is not None and not df_matches.empty:
                 res = str(row.get('FTR', '')).upper()
                 if (is_home and res == 'H') or (not is_home and res == 'A'):
                     result_str = "Zwycięstwo"
+                    res_color = "#059669"
                 elif res == 'D':
                     result_str = "Remis"
+                    res_color = "#4B5563"
                 else:
                     result_str = "Porażka"
+                    res_color = "#DC2626"
+
+                btts_color = "#34D399" if is_btts else "#F87171"
 
                 matches_rows.append({
                     "Data": str(row.get('Date', '')),
                     "Przeciwnik": str(opp),
                     "Miejsce": "Dom" if is_home else "Wyjazd",
-                    "Wynik": result_str,
+                    "Wynik": f"<span style='background-color:{res_color}; padding: 3px 8px; border-radius:4px; font-weight:bold;'>{result_str}</span>",
                     "Gole": f"{gf} : {ga}",
-                    "BTTS": "TAK" if is_btts else "NIE",
+                    "BTTS": f"<span style='color:{btts_color}; font-weight:bold;'>{'TAK' if is_btts else 'NIE'}</span>",
                     "Strzały (Celne)": f"{sh} ({st_val})",
                     "Faule": str(fl),
                     "Kartki (Ż/C)": f"{hy} 🟨 / {hr} 🟥"
                 })
 
-            matches_df = pd.DataFrame(matches_rows)
+            m_html = "<table class='custom-table'><thead><tr>"
+            m_cols = ["Data", "Przeciwnik", "Miejsce", "Wynik", "Gole", "BTTS", "Strzały (Celne)", "Faule", "Kartki (Ż/C)"]
+            for mc in m_cols:
+                m_html += f"<th>{mc}</th>"
+            m_html += "</tr></thead><tbody>"
 
-            def color_results(val):
-                if val == 'Zwycięstwo':
-                    return 'background-color: #059669; color: white'
-                elif val == 'Remis':
-                    return 'background-color: #4B5563; color: white'
-                elif val == 'Porażka':
-                    return 'background-color: #DC2626; color: white'
-                return ''
+            for mr in matches_rows:
+                m_html += "<tr>"
+                for mc in m_cols:
+                    m_html += f"<td>{mr[mc]}</td>"
+                m_html += "</tr>"
+            m_html += "</tbody></table>"
 
-            def color_btts(val):
-                if val == 'TAK':
-                    return 'color: #34D399; font-weight: bold'
-                elif val == 'NIE':
-                    return 'color: #F87171; font-weight: bold'
-                return ''
-
-            styled_matches = matches_df.style.map(color_results, subset=['Wynik'])\
-                                             .map(color_btts, subset=['BTTS'])
-
-            st.dataframe(styled_matches, use_container_width=True, hide_index=True)
+            st.markdown(m_html, unsafe_allow_html=True)
 
 else:
     st.error("Wybierz ligę i pobierz dane.")
