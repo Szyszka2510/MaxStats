@@ -6,7 +6,7 @@ import streamlit as st
 # Konfiguracja strony
 st.set_page_config(page_title="MaxStats - Twój Asystent Piłkarski", layout="wide")
 
-# Custom CSS — dostosowanie stylów
+# Custom CSS — ukrycie paska narzędzi tabeli (3 kropki, pobieranie, szukanie) oraz stylizacja
 st.markdown("""
 <style>
     .stApp { background-color: #0F172A; color: #F8FAFC; }
@@ -25,6 +25,10 @@ st.markdown("""
         border-radius: 12px;
         padding: 15px;
         margin-bottom: 20px;
+    }
+    /* Ukrycie paska narzędzi nad tabelami (3 kropki, pobieranie, wyszukiwanie, powiększenie) */
+    [data-testid="stElementToolbar"] {
+        display: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -275,18 +279,9 @@ if df_matches is not None and not df_matches.empty:
                     "Rożne / mecz": round(cr_sum / n_matches, 2)
                 })
 
-            comp_df = pd.DataFrame(comparison_rows)
+            comp_df = pd.DataFrame(comparison_rows).sort_values(by="Poz.")
 
-            # Opcje sortowania nad tabelą
-            col_sort_1, col_sort_2 = st.columns([2, 1])
-            with col_sort_1:
-                sort_col = st.selectbox("Sortuj według kolumny:", list(comp_df.columns), index=0)
-            with col_sort_2:
-                sort_order = st.radio("Kierunek:", ["Rosnąco", "Malejąco"], horizontal=True)
-
-            is_ascending = (sort_order == "Rosnąco")
-            comp_df = comp_df.sort_values(by=sort_col, ascending=is_ascending)
-
+            # Wyświetlenie czystej tabeli (kliknięcie w dowolną nagłówek kolumny sortuje rosnąco/malejąco)
             st.dataframe(comp_df, use_container_width=True, hide_index=True)
 
     # ================= ZAKŁADKA 3: LISTA MECZÓW =================
