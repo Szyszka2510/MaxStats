@@ -236,7 +236,7 @@ if df_matches is not None and not df_matches.empty:
 
             r2_c1, r2_c2 = st.columns(2)
             r2_c1.metric("🎯 STRZAŁY NA MECZ", f"{shots/n:.2f}", f"Średnia celnych: {shots_target/n:.2f} na mecz (Celność: {acc:.1f}%)", delta_color="off")
-            r2_c2.metric("🟨🟫 KARTKI NA MECZ", f"{(yellows+reds)/n:.2f}", f"Suma: {yellows} 🟨 żółtych | {reds} 🟥 czerwonych w okresie", delta_color="off")
+            r2_c2.metric("🟨🟥 KARTKI NA MECZ", f"{(yellows+reds)/n:.2f}", f"Suma: {yellows} 🟨 żółtych | {reds} 🟥 czerwonych w okresie", delta_color="off")
 
             r3_c1, r3_c2 = st.columns(2)
             r3_c1.metric("⚠️ FAULE NA MECZ", f"{fouls/n:.2f}", f"Łącznie popełniono fauli: {fouls}", delta_color="off")
